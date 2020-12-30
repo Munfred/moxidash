@@ -61,3 +61,73 @@ fig.update_layout(
 )
 fig.update_layout(template='none')
 fig.show()              
+
+
+
+
+
+%%time
+group11=35
+group12=36
+gene='ENSMUSG00000074637'
+tc = df.loc[gene].copy() ## create tc dataframe to hold timecourse data for chosen data
+tc=tc[(tc.group1==group11) | (tc.group1==group12)].copy()
+for col in ['day','replicate','timepoint','dcr','condition']:
+    print(col)
+    tc[col]=tc.group2.map(samples[col])
+
+tc['condition_replicate']=tc['condition']+tc['replicate']
+
+
+
+
+## timecourse expression plot
+fig = go.Figure()
+for cr in tc.condition_replicate.unique():
+    plotdf = tc.query('condition_replicate==@cr')
+
+    fig.add_trace(go.Scatter(
+        x=plotdf.timepoint, 
+        y=plotdf.logscale2,
+        mode='lines+markers',
+        name=cr
+    ))
+fig.update_layout(
+    title="Timecourse expression of gene " + gene,
+    xaxis_title="Day",
+    yaxis_title="log10 expression frequency",
+    legend_title="Condition",
+)
+fig.update_layout(template='none')
+fig.show()
+
+
+## timecourse lfc plot
+fig = go.Figure()
+for cr in tc.condition_replicate.unique():
+    plotdf = tc.query('condition_replicate==@cr')
+
+    fig.add_trace(go.Scatter(
+        x=plotdf.timepoint, 
+        y=plotdf.lfc_mean,
+        mode='lines+markers',
+        name=cr
+    ))
+    fig.add_trace(go.Scatter(
+        x=np.append(plotdf.timepoint.values,plotdf.timepoint.values[::-1]), # x, then x reversed
+        y=np.append(plotdf.lfc_mean.values+plotdf.lfc_std.values, plotdf.lfc_mean.values[::-1] - plotdf.lfc_std.values[::-1]), # upper, then lower reversed
+        fill='toself',
+        fillcolor='rgba(100,100,100,0.2)',
+        line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo="skip",
+        showlegend=False
+    ))
+
+fig.update_layout(
+    title="Timecourse of log fold change of gene " + gene + ' relative to group 1',
+    xaxis_title="Day",
+    yaxis_title="Log fold change",
+    legend_title="Condition",
+)
+fig.update_layout(template='none')
+fig.show()
