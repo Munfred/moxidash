@@ -3,7 +3,7 @@ import dash_html_components as html
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
-
+import json
 from dash.dependencies import Input, Output
 import pandas as pd
 import numpy as np
@@ -152,51 +152,24 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
              , children=[
         html.Div([
             # html.H3('Column 1'),
-            dcc.Graph(id='volcano1', figure={'data': [{'y': [1, 2, 3]}],
-                                       'layout': go.Layout(
-                                           # margin={'t': 3, 'b':3},
-                                           title="Plot Title t1",
-                                           xaxis_title="X Axis Title",
-                                           yaxis_title="Y Axis Title",
-                                           legend_title="Legend Title",
-                                           height=300,
-                                       ),
-                                       })
+            dcc.Graph(id='volcano1', figure={})
         ], className="six columns"),
 
         html.Div([
             # html.H3('Column 2'),
-            dcc.Graph(id='volcano2', figure={'data': [{'y': [1, 2, 3]}]})
+            dcc.Graph(id='volcano2', figure={})
         ], className="six columns"),
     ], className="row"),
     html.Div(id='bottomdiv', style={'border': '6px brown solid'}, children=[
         html.Div(id='timecoursediv', style={'border': '6px green solid'}, children=[
             html.Div(id='t1div', style={'border': '6px gold solid'}, children=[
                 # html.H3('Column 1'),
-                dcc.Graph(id='t1', figure={'data': [{'y': [1, 2, 3], 'name': 'fooo'}],
-                                           'layout': go.Layout(
-                                               margin={'t': 0},
-                                               title="Plot Title t1",
-                                               xaxis_title="X Axis Title",
-                                               yaxis_title="Y Axis Title",
-                                               legend_title="Legend Title",
-                                               height=300,
-                                           ),
-                                           }),
+                dcc.Graph(id='t1', figure={}),
             ]),
 
             html.Div(id='t2div', style={'border': '6px purple solid'}, children=[
                 # html.H3('Column 2'),
-                dcc.Graph(id='t2', figure={'data': [{'y': [1, 2, 3]}],
-                                           'layout': go.Layout(
-                                               margin={'t': 0},
-                                               title="Plot Title t2",
-                                               xaxis_title="X Axis Title",
-                                               yaxis_title="Y Axis Title",
-                                               legend_title="Legend Title",
-                                               height=300,
-                                           ),
-                                           })
+                dcc.Graph(id='t2', figure={})
             ]),
         ], className="nine columns"),
         html.Div([
@@ -207,11 +180,10 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
             ], style={'border': '8px blue solid'}),
             # html.H3('Gene list'),
 
-            html.Div(
-                html.Pre(id='chosen_genename_list', children='GENE NAMES  \n \t GO HERE',
-                         style={'border': '2px gray solid'})),
-            html.Div(html.Pre(id='chosen_geneid_list', children='GENE IDS <br> GO HERE',
-                              style={'border': '2px magenta solid'}))
+            html.Div([
+            html.Div(id='chosen_genename_list',  style={'border': '2px gray solid'}),
+            html.Div(id='chosen_geneid_list',  style={'border': '2px magenta solid'})
+                ]),
         ], className="three columns", style={'border': '8px orange solid'}),
     ], className="row"),
 
@@ -219,18 +191,10 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
 
 ####################### CALLBACKS TO MAKE PLOTS ##########################
 
-@app.callback( Output('volcano2', 'figure'),
-               [Input('group1', 'value'),
-                Input('group2', 'value')])
-def update_volcano1(timepoint1, timepoint2):
-    group1_name=timepoint1
-    group2_name=timepoint2
-    de=pd.read_csv('testdedf_D0D5.csv', index_col = 0)
-    jitterpval = de["pval"] + np.random.uniform(low=-1, high=1, size=len(de["pval"])) * de["pval"].pow(4).values / 625
+def make_volcano(de, group1_name, group2_name, replicate):
     fig = go.Figure(
         data=go.Scattergl(
             x=de["lfc_mean"].round(3)
-            # , y=jitterpval
             , y=de["pval"].round(3)
             , mode='markers'
             , marker=dict(color=de.pval, opacity=0.2, colorscale='Hot', reversescale=True)
@@ -243,9 +207,9 @@ def update_volcano1(timepoint1, timepoint2):
             , hovertemplate='%{customdata} <br><extra>%{text}</extra>'
         )
         , layout={
-            "title": {"text": "<br>Replicate 2 Differential expression of day " + str(group1_name) + ' vs day ' + str(group2_name)
+            "title": {"text": "<br>" + str(replicate) + " replicate differential expression - day " +
+                              str(group1_name) + ' VS day ' + str(group2_name)
                       , 'font':{'size':14}
-                # , 'x': 0.5
                       }
             , 'xaxis': {'title': {"text": "　&nbsp;　log fold change <br> <br> "}}
             , 'yaxis': {'title': {"text": "<br> <br> -log10(p-value)"}}
@@ -255,41 +219,36 @@ def update_volcano1(timepoint1, timepoint2):
         }
     )
 
-    fig.update_layout(hovermode='closest')
-    fig.add_shape(type="line", x0=-10, y0=3, x1=10, y1=3,
-                  line=dict(color="Red", width=2, dash="dash", )
-                  )
-    fig.update_layout(
-        hoverlabel=dict(
-            #         bgcolor="white",
-            #         font_size=16,
-            #         font_family="Rockwell"
-        )
-    )
-    fig.update_layout(template='none')
+    fig.update_layout(hovermode='closest', template='none')
+    fig.add_shape(type="line", x0=-10, y0=3, x1=10, y1=3, line=dict(color="Red", width=2, dash="dash"))
     # fig.show()
     return fig
 
 
+@app.callback( Output('volcano2', 'figure'),
+               [Input('group1', 'value'),
+                Input('group2', 'value')])
+def update_volcano2(timepoint1, timepoint2):
+    group1_name=timepoint1
+    group2_name=timepoint2
+    replicate='C2'
+    de=pd.read_csv('testdedf_D0D5.csv', index_col = 0)
+    fig = make_volcano(de, group1_name, group2_name, replicate=replicate)
+    return fig
 
+### callback to select data from volcanos
+@app.callback(Output('chosen_geneid_list', 'children'),
+              [Input('volcano2', 'selectedData')])
+def display_selected_data(selectedData):
+    # table_style_conditions = update_table_style(selectedData)
+    print(json.dumps(selectedData))
+    return json.dumps(selectedData)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+@app.callback(Output('chosen_genename_list', 'children'),
+              [Input('volcano2', 'clickData')])
+def display_selected_data(clickData):
+    print(json.dumps(clickData))
+    return json.dumps(clickData)
 
 
 if __name__ == '__main__':
