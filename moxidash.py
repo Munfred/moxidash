@@ -8,6 +8,22 @@ from dash.dependencies import Input, Output
 import pandas as pd
 import numpy as np
 
+
+
+########## LOAD CSVS AND OTHER RESOURCES INTO PYTHON #####################
+
+# create list of gene ids/names to search on searchbox
+gene_search_options_df=pd.read_csv('broad17866genelist.csv')
+gene_search_options_list = []
+for idx, row in gene_search_options_df.iterrows():
+    gene_search_options_list.append(
+    # creates a dict with label `geneid genename` and value `geneid`
+    {'label': row[0] + ' ' + row[1], 'value':row[0]}
+    )
+
+
+
+########## DASH APP LAYOUT ###################
 app = dash.Dash(external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
 app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, children=[
@@ -48,28 +64,10 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
                     html.H6(""" Search for gene to visualize in timecourse (or click on volcano plot)"""),
                 ]),
                 dcc.Dropdown(
-                    id='volcano_gene_selection',
-                    options=[
-                        {'label': 'D0 Dox', 'value': 'D0 Dox'},
-                        {'label': 'D0.5 Dox', 'value': 'D0.5 Dox'},
-                        {'label': 'D1 Dox', 'value': 'D1 Dox'},
-                        {'label': 'D1.5 Dox', 'value': 'D1.5 Dox'},
-                        {'label': 'D2 Dox', 'value': 'D2 Dox'},
-                        {'label': 'D2.5 Dox', 'value': 'D2.5 Dox'},
-                        {'label': 'D3 Dox', 'value': 'D3 Dox'},
-                        {'label': 'D3.5 Dox', 'value': 'D3.5 Dox'},
-                        {'label': 'D4 Dox', 'value': 'D4 Dox'},
-                        {'label': 'D4.5 Dox', 'value': 'D4.5 Dox'},
-                        {'label': 'D5 Dox', 'value': 'D5 Dox'},
-                        {'label': 'D5.5 Dox', 'value': 'D5.5 Dox'},
-                        {'label': 'D6 Dox', 'value': 'D6 Dox'},
-                        {'label': 'D6.5 Dox', 'value': 'D6.5 Dox'},
-                        {'label': 'D7 Dox', 'value': 'D7 Dox'},
-                        {'label': 'D7.5 Dox', 'value': 'D7.5 Dox'},
-                        {'label': 'D8 Dox', 'value': 'D8 Dox'},
-                    ],
+                    id='gene_searchbox',
+                    options=gene_search_options_list,
                     multi=False,
-                    value="0 Dox"
+                    value="ENSMUSG00000012396"
                 )]
                      ),
         ], className="six columns"),
@@ -150,10 +148,11 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
         ], className="six columns"),
     ], className="row"),
 
-    html.Div(id='volcanosdiv', style={'border': '6px red solid'}, children=[
+    html.Div(id='volcanosdiv', style={'border': '6px none solid'}
+             , children=[
         html.Div([
             # html.H3('Column 1'),
-            dcc.Graph(id='g1', figure={'data': [{'y': [1, 2, 3]}],
+            dcc.Graph(id='volcano1', figure={'data': [{'y': [1, 2, 3]}],
                                        'layout': go.Layout(
                                            # margin={'t': 3, 'b':3},
                                            title="Plot Title t1",
@@ -167,16 +166,7 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
 
         html.Div([
             # html.H3('Column 2'),
-            dcc.Graph(id='g2', figure={'data': [{'y': [1, 2, 3]}],
-                                       'layout': go.Layout(
-                                           # margin={'t': 3, 'b':3},
-                                           title="Plot Title t1",
-                                           xaxis_title="X Axis Title",
-                                           yaxis_title="Y Axis Title",
-                                           legend_title="Legend Title",
-                                           height=300,
-                                       ),
-                                       })
+            dcc.Graph(id='volcano2', figure={'data': [{'y': [1, 2, 3]}]})
         ], className="six columns"),
     ], className="row"),
     html.Div(id='bottomdiv', style={'border': '6px brown solid'}, children=[
@@ -226,6 +216,81 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
     ], className="row"),
 
 ])
+
+####################### CALLBACKS TO MAKE PLOTS ##########################
+
+@app.callback( Output('volcano2', 'figure'),
+               [Input('group1', 'value'),
+                Input('group2', 'value')])
+def update_volcano1(timepoint1, timepoint2):
+    group1_name=timepoint1
+    group2_name=timepoint2
+    de=pd.read_csv('testdedf_D0D5.csv', index_col = 0)
+    jitterpval = de["pval"] + np.random.uniform(low=-1, high=1, size=len(de["pval"])) * de["pval"].pow(4).values / 625
+    fig = go.Figure(
+        data=go.Scattergl(
+            x=de["lfc_mean"].round(3)
+            # , y=jitterpval
+            , y=de["pval"].round(3)
+            , mode='markers'
+            , marker=dict(color=de.pval, opacity=0.2, colorscale='Hot', reversescale=True)
+            , hoverinfo='text'
+            , text=de['gene_description_html']
+            , customdata=de.gene_name.astype(str) + '<br>' + de.gene_id.values + \
+                         '<br>-log10(p-value): \t' + de["pval"].round(3).astype(str) + \
+                         '<br>LFC mean: \t' + de["lfc_mean"].round(3).astype(str) + \
+                         '<br>LFC std: \t' + de["lfc_std"].round(3).astype(str)
+            , hovertemplate='%{customdata} <br><extra>%{text}</extra>'
+        )
+        , layout={
+            "title": {"text": "<br>Replicate 2 Differential expression of day " + str(group1_name) + ' vs day ' + str(group2_name)
+                      , 'font':{'size':14}
+                # , 'x': 0.5
+                      }
+            , 'xaxis': {'title': {"text": "　&nbsp;　log fold change <br> <br> "}}
+            , 'yaxis': {'title': {"text": "<br> <br> -log10(p-value)"}}
+            , 'margin':{'t': 0, 'b':15, 'l':10, 'r':0}
+            # , 'width': 1200
+            # , 'height': 300
+        }
+    )
+
+    fig.update_layout(hovermode='closest')
+    fig.add_shape(type="line", x0=-10, y0=3, x1=10, y1=3,
+                  line=dict(color="Red", width=2, dash="dash", )
+                  )
+    fig.update_layout(
+        hoverlabel=dict(
+            #         bgcolor="white",
+            #         font_size=16,
+            #         font_family="Rockwell"
+        )
+    )
+    fig.update_layout(template='none')
+    # fig.show()
+    return fig
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
