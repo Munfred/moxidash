@@ -8,33 +8,28 @@ from dash.dependencies import Input, Output
 import pandas as pd
 import numpy as np
 
-
-
 ########## LOAD CSVS AND OTHER RESOURCES INTO PYTHON #####################
 
 # create list of gene ids/names to search on searchbox
-gene_search_options_df=pd.read_csv('broad17866genelist.csv')
+gene_search_options_df = pd.read_csv('broad17866genelist.csv')
 gene_search_options_list = []
 for idx, row in gene_search_options_df.iterrows():
     gene_search_options_list.append(
-    # creates a dict with label `geneid genename` and value `geneid`
-    {'label': row[0] + ' ' + row[1], 'value':row[0]}
+        # creates a dict with label `geneid genename` and value `geneid`
+        {'label': row[0] + ' ' + row[1], 'value': row[0]}
     )
-
-
 
 ########## DASH APP LAYOUT ###################
 app = dash.Dash(external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
-app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, children=[
-    html.Div(id='mesodiv', style={'border': '6px pink solid'}, children=[
-        html.Div(id='group1div', style={'border': '6px darkblue solid'}, children=[
-
+app.layout = html.Div(id='megadiv', children=[
+    html.Div(id='mesodiv', children=[
+        html.Div(id='group1div', children=[
             html.Div([
                 html.H6(""" Select timepoint for group 1 """),
                 html.P("""D = Dox (first 8 days)"""),
             ]),
-            dcc.RadioItems(
+            dcc.Dropdown(
                 id='group1',
                 options=[
                     {'label': 'D0　　', 'value': '0 Dox'},
@@ -56,28 +51,14 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
                     {'label': 'D8　　', 'value': '8 Dox'},
                 ],
                 value='0 Dox',
-                labelStyle={'display': 'inline-block'}
             ),
-            html.Div(id='volcanoseldiv', style={'border': '6px darkred solid',
-                                                'marginTop': '2em'}, children=[
-                html.Div([
-                    html.H6(""" Search for gene to visualize in timecourse (or click on volcano plot)"""),
-                ]),
-                dcc.Dropdown(
-                    id='gene_searchbox',
-                    options=gene_search_options_list,
-                    multi=False,
-                    value="ENSMUSG00000012396"
-                )]
-                     ),
-        ], className="six columns"),
-
-        html.Div(id='group2div', style={'border': '6px lightblue solid'}, children=[
+        ], className="four columns"),
+        html.Div(id='group2div', children=[
             html.Div([
                 html.H6(""" Select timepoint for group 2 """),
                 html.P("D = Dox (first 8 days), I = i2 branch, last 10 days, S = serum branch, last 10 days")
             ]),
-            dcc.RadioItems(
+            dcc.Dropdown(
                 id='group2',
                 options=[
                     {'label': 'D0　　', 'value': '0 Dox'},
@@ -143,28 +124,41 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
                     {'label': 'I18　　', 'value': '18 2i'},
                 ],
                 value='5 Dox',
-                labelStyle={'display': 'inline-block'}
             ),
-        ], className="six columns"),
+        ], className="four columns"),
+        html.Div(id='volcanoseldiv', children=[
+            html.Div([
+                html.H6(""" Search for gene to visualize in timecourse """),
+                html.P("(or click on volcano plot)")
+            ]),
+            dcc.Dropdown(
+                id='gene_searchbox',
+                options=gene_search_options_list,
+                multi=False,
+                value="ENSMUSG00000012396"
+            )
+        ], className="four columns"),
+
     ], className="row"),
 
     html.Div(id='volcanosdiv', style={'border': '6px none solid'}
              , children=[
-        html.Div([
-            # html.H3('Column 1'),
-            dcc.Graph(id='volcano1', figure={})
-        ], className="six columns"),
+            html.Div([
+                # html.H3('Column 1'),
+                dcc.Graph(id='volcano1', figure={})
+            ], className="six columns"),
 
-        html.Div([
-            # html.H3('Column 2'),
-            dcc.Graph(id='volcano2', figure={})
-        ], className="six columns"),
-    ], className="row"),
+            html.Div([
+                # html.H3('Column 2'),
+                dcc.Graph(id='volcano2', figure={})
+            ], className="six columns"),
+        ], className="row"),
     html.Div(id='bottomdiv', style={'border': '6px brown solid'}, children=[
         html.Div(id='timecoursediv', style={'border': '6px green solid'}, children=[
             html.Div(id='t1div', style={'border': '6px gold solid'}, children=[
                 # html.H3('Column 1'),
                 dcc.Graph(id='t1', figure={}),
+
             ]),
 
             html.Div(id='t2div', style={'border': '6px purple solid'}, children=[
@@ -181,13 +175,14 @@ app.layout = html.Div(id='megadiv', style={'border': '6px black solid'}, childre
             # html.H3('Gene list'),
 
             html.Div([
-            html.Div(id='chosen_genename_list',  style={'border': '2px gray solid'}),
-            html.Div(id='chosen_geneid_list',  style={'border': '2px magenta solid'})
-                ]),
+                html.Div(id='chosen_genename_list', style={'border': '2px gray solid'}),
+                html.Div(id='chosen_geneid_list', style={'border': '2px magenta solid'})
+            ]),
         ], className="three columns", style={'border': '8px orange solid'}),
     ], className="row"),
 
 ])
+
 
 ####################### CALLBACKS TO MAKE PLOTS ##########################
 
@@ -207,13 +202,14 @@ def make_volcano(de, group1_name, group2_name, replicate):
             , hovertemplate='%{customdata} <br><extra>%{text}</extra>'
         )
         , layout={
-            "title": {"text": "<br>" + str(replicate) + " replicate differential expression - day " +
+            "title": {"text": "<br>" + str(replicate) + " replicate DE - day " +
                               str(group1_name) + ' VS day ' + str(group2_name)
-                      , 'font':{'size':14}
+                , 'font': {'size': 16}
+                , 'x': 0
                       }
             , 'xaxis': {'title': {"text": "　&nbsp;　log fold change <br> <br> "}}
             , 'yaxis': {'title': {"text": "<br> <br> -log10(p-value)"}}
-            , 'margin':{'t': 0, 'b':15, 'l':10, 'r':0}
+            , 'margin': {'t': 20, 'b': 15, 'l': 10, 'r': 0}
             # , 'width': 1200
             # , 'height': 300
         }
@@ -225,30 +221,65 @@ def make_volcano(de, group1_name, group2_name, replicate):
     return fig
 
 
-@app.callback( Output('volcano2', 'figure'),
-               [Input('group1', 'value'),
-                Input('group2', 'value')])
+@app.callback(Output('volcano2', 'figure'),
+              [Input('group1', 'value'),
+               Input('group2', 'value')])
 def update_volcano2(timepoint1, timepoint2):
-    group1_name=timepoint1
-    group2_name=timepoint2
-    replicate='C2'
-    de=pd.read_csv('testdedf_D0D5.csv', index_col = 0)
+    group1_name = timepoint1
+    group2_name = timepoint2
+    replicate = 'C2'
+    de = pd.read_csv('testdedf_D0D5.csv', index_col=0)
     fig = make_volcano(de, group1_name, group2_name, replicate=replicate)
     return fig
 
-### callback to select data from volcanos
-@app.callback(Output('chosen_geneid_list', 'children'),
-              [Input('volcano2', 'selectedData')])
-def display_selected_data(selectedData):
-    # table_style_conditions = update_table_style(selectedData)
-    print(json.dumps(selectedData))
-    return json.dumps(selectedData)
+
+@app.callback(Output('volcano1', 'figure'),
+              [Input('group1', 'value'),
+               Input('group2', 'value')])
+def update_volcano2(timepoint1, timepoint2):
+    group1_name = timepoint1
+    group2_name = timepoint2
+    replicate = 'C1'
+    de = pd.read_csv('testdedf_D0D5.csv', index_col=0)
+    fig = make_volcano(de, group1_name, group2_name, replicate=replicate)
+    return fig
+
+
+# ### callback to select data from volcanos
+# @app.callback(Output('chosen_geneid_list', 'children'),
+#               [Input('volcano1', 'selectedData'),
+#                Input('volcano2', 'selectedData')])
+# def display_selected_data(selectedData):
+#     # table_style_conditions = update_table_style(selectedData)
+#     print(json.dumps(selectedData))
+#     return json.dumps(selectedData)
 
 @app.callback(Output('chosen_genename_list', 'children'),
-              [Input('volcano2', 'clickData')])
-def display_selected_data(clickData):
-    print(json.dumps(clickData))
-    return json.dumps(clickData)
+              [Input('volcano1', 'clickData'),
+               Input('volcano2', 'clickData')])
+def update_some_div(graph_one_clickData, graph_two_clickData):
+    if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
+        customdata = graph_one_clickData['points'][0]['customdata']
+        print(customdata.split('<br>')[0])
+        print(customdata.split('<br>')[1])
+        gene_id = customdata.split('<br>')[1]
+        gene_name = customdata.split('<br>')[0]
+        return "You clicked on graph one " + gene_id + gene_name
+
+    if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
+        customdata = graph_two_clickData['points'][0]['customdata']
+        gene_id = customdata.split('<br>')[1]
+        return "You clicked on graph two" + gene_id + gene_name
+
+    return "Should not get here"
+
+
+# def display_click_data(clickData):
+#     customdata = clickData['points'][0]['customdata']
+#     print(customdata.split('<br>')[0])
+#     print(customdata.split('<br>')[1])
+#
+#     return json.dumps(clickData)
 
 
 if __name__ == '__main__':
