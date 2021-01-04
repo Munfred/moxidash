@@ -17,15 +17,14 @@ added_gene_id_csv = ''
 selected_gene_name_csv = ''
 selected_gene_id_csv = ''
 
-
 ## colors for line plots
-colordict={
-'DoxC1':'#000099',
-'2iC1':'#d48002',
-'serumC1':'#5B2C6F',
-'DoxC2':'#66a3ff',
-'2iC2':'#F4D03F',
-'serumC2':'#DF9AFF'
+colordict = {
+    'DoxC1': '#000099',
+    '2iC1': '#d48002',
+    'serumC1': '#5B2C6F',
+    'DoxC2': '#66a3ff',
+    '2iC2': '#F4D03F',
+    'serumC2': '#DF9AFF'
 }
 
 # create list of gene ids/names to search on searchbox
@@ -37,15 +36,14 @@ for idx, row in gene_search_options_df.iterrows():
         {'label': row[0] + ' ' + row[1], 'value': row[0]}
     )
 
-nice_descriptions=pd.read_csv('nice_mouse_gene_descriptions.csv', index_col=0)
+nice_descriptions = pd.read_csv('nice_mouse_gene_descriptions.csv', index_col=0)
 
 samples = pd.read_csv('https://docs.google.com/spreadsheets/d/' +
-                   '1_NePfzEcTq2VS9U1y5tpWm9tf2N6oTmEgoAjuT-YVZw' +
-                   '/export?gid=0&format=csv',
-                   index_col=0,
-                  )
-samples=samples.set_index('numid')
-
+                      '1_NePfzEcTq2VS9U1y5tpWm9tf2N6oTmEgoAjuT-YVZw' +
+                      '/export?gid=0&format=csv',
+                      index_col=0,
+                      )
+samples = samples.set_index('numid')
 
 bigdedf = pd.read_csv('broad_de_df_20201230.csv', index_col=0)
 print('Loaded!')
@@ -53,6 +51,15 @@ print('Loaded!')
 ########## DASH APP LAYOUT ###################
 
 app.layout = html.Div(id='megadiv', children=[
+    html.Div(id='markdowndiv', children=[
+                # html.H3('Column 2'),
+                dcc.Markdown('''
+                This dashboard enables visualization of 250k single cells profiled with
+                10xv2 chemistry in [Schiebinger 2019](https://doi.org/10.1016/j.cell.2019.01.006). 
+                For more details see 
+                [this document](https://docs.google.com/document/d/e/2PACX-1vQqMMBEbi36Tnrb3lIuu4QqMpBGbVpzlvZSqA6r_PPioOF_BG-HP2yk71F-haZcRLxL6KfA8urugUCf/pub)
+                '''),
+            ]),
     html.Div(id='mesodiv', children=[
         html.Div(id='group1div', children=[
             html.Div([
@@ -171,20 +178,20 @@ app.layout = html.Div(id='megadiv', children=[
 
     ], className="row"),
 
-    html.Div(id='volcanosdiv',children=[
-            html.Div([
-                # html.H3('Column 1'),
-                dcc.Graph(id='volcano1', figure={})
-            ], className="six columns"),
+    html.Div(id='volcanosdiv', children=[
+        html.Div([
+            # html.H3('Column 1'),
+            dcc.Graph(id='volcano1', figure={})
+        ], className="six columns"),
 
-            html.Div([
-                # html.H3('Column 2'),
-                dcc.Graph(id='volcano2', figure={})
-            ], className="six columns"),
-        ], className="row"),
+        html.Div([
+            # html.H3('Column 2'),
+            dcc.Graph(id='volcano2', figure={})
+        ], className="six columns"),
+    ], className="row"),
     html.Div(id='bottomdiv', children=[
-        html.Div(id='timecoursediv',  children=[
-            html.Div(id='t1div',children=[
+        html.Div(id='timecoursediv', children=[
+            html.Div(id='t1div', children=[
                 # html.H3('Column 1'),
                 dcc.Graph(id='timecourse_expression', figure={}),
 
@@ -194,10 +201,15 @@ app.layout = html.Div(id='megadiv', children=[
                 # html.H3('Column 2'),
                 dcc.Graph(id='timecourse_lfc', figure={})
             ]),
+
+
+
+
         ], className="nine columns"),
         html.Div([
             html.Div([
-                html.Div(id='searched_gene', style={'border': '6px yellow solid'}, children=' SEARCHED GENE SHOWS HERE'),
+                html.Div(id='searched_gene', style={'border': '6px yellow solid'},
+                         children=' SEARCHED GENE SHOWS HERE'),
                 html.Div(html.Button('Add selected genes', id='addgenes_button', n_clicks=0)),
                 html.Div(id='selection_header', style={'border': '2px red solid'}, children=' Selected genes: '),
                 html.Div(id='selected_genename_preview', style={'border': '2px lime solid'}),
@@ -212,6 +224,8 @@ app.layout = html.Div(id='megadiv', children=[
             ]),
         ], className="three columns", style={'border': '8px orange solid'}),
     ], className="row"),
+
+
 
 ])
 
@@ -258,7 +272,7 @@ def fetchnumid(rep, group):
     timepoint = group.split(' ')[0]
     condition = group.split(' ')[1]
     return samples[(samples.timepoint == float(timepoint)) & (samples.condition == condition) & (
-                samples.replicate == rep)].index.values[0]
+            samples.replicate == rep)].index.values[0]
 
 
 @app.callback(Output('volcano1', 'figure'),
@@ -271,7 +285,7 @@ def update_volcano1(timepoint1, timepoint2):
     de = bigdedf[(bigdedf.group1 == numid1) & (bigdedf.group2 == numid2)].copy()
     de['gene_name'] = de.index.map(nice_descriptions['gene_name'])
     de['gene_description_html'] = de.index.map(nice_descriptions['html_description'])
-    de['gene_id']=de.index
+    de['gene_id'] = de.index
     fig = make_volcano(de, timepoint1, timepoint2, replicate=rep)
     return fig
 
@@ -286,7 +300,7 @@ def update_volcano2(timepoint1, timepoint2):
     de = bigdedf[(bigdedf.group1 == numid1) & (bigdedf.group2 == numid2)].copy()
     de['gene_name'] = de.index.map(nice_descriptions['gene_name'])
     de['gene_description_html'] = de.index.map(nice_descriptions['html_description'])
-    de['gene_id']=de.index
+    de['gene_id'] = de.index
     fig = make_volcano(de, timepoint1, timepoint2, replicate=rep)
     return fig
 
@@ -303,7 +317,7 @@ def update_selected_gene_preview(graph_one_selectData, graph_two_selectData):
         selected_gene_id_csv = ''
         for i in range(len(graph_one_selectData['points'])):
             # add comma separator if this is not the first element
-            if len(selected_gene_name_csv) !=0: selected_gene_name_csv += ', '
+            if len(selected_gene_name_csv) != 0: selected_gene_name_csv += ', '
             customdata = graph_one_selectData['points'][i]['customdata']
             gene_name = customdata.split('<br>')[0]
             gene_id = customdata.split('<br>')[1]
@@ -316,39 +330,39 @@ def update_selected_gene_preview(graph_one_selectData, graph_two_selectData):
         selected_gene_id_csv = ''
         for i in range(len(graph_two_selectData['points'])):
             # add comma separator if this is not the first element
-            if len(selected_gene_name_csv) !=0: selected_gene_name_csv += ', '
+            if len(selected_gene_name_csv) != 0: selected_gene_name_csv += ', '
             customdata = graph_two_selectData['points'][i]['customdata']
             gene_name = customdata.split('<br>')[0]
             gene_id = customdata.split('<br>')[1]
-            selected_gene_name_csv = selected_gene_name_csv  + gene_name
+            selected_gene_name_csv = selected_gene_name_csv + gene_name
             selected_gene_id_csv = selected_gene_id_csv + gene_id
         return selected_gene_name_csv
 
     return "Select genes with the lasso or box tool and they will show up here"
+
+
 #     # table_style_conditions = update_table_style(selectedData)
 #     print(json.dumps(selectedData))
 #     return json.dumps(selectedData)
 
-@app.callback(Output('chosen_genename_list', 'children'),
-              [Input('volcano1', 'clickData'),
-               Input('volcano2', 'clickData')])
-def update_click_data(graph_one_clickData, graph_two_clickData):
-    if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
-        customdata = graph_one_clickData['points'][0]['customdata']
-        print(customdata.split('<br>')[0])
-        print(customdata.split('<br>')[1])
-        gene_id = customdata.split('<br>')[1]
-        gene_name = customdata.split('<br>')[0]
-        return "You clicked on graph one " + gene_id + ' ' + gene_name
-
-    if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
-        customdata = graph_two_clickData['points'][0]['customdata']
-        gene_id = customdata.split('<br>')[1]
-        gene_name = customdata.split('<br>')[0]
-        return "You clicked on graph two " + gene_id + ' ' + gene_name
-
-    return "Start adding genes and they will show up here"
-
+# @app.callback(Output('timecourse_expression', 'figure'),
+#               [Input('volcano1', 'clickData'),
+#                Input('volcano2', 'clickData'),
+#                Input('group1', 'value')])
+# def update_click_timecourse_expression(graph_one_clickData, graph_two_clickData, timepoint1):
+#     numid11 = fetchnumid('C1', timepoint1)
+#     numid21 = fetchnumid('C2', timepoint1)
+#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
+#         customdata = graph_one_clickData['points'][0]['customdata']
+#         gene_id = customdata.split('<br>')[1]
+#         return make_timecourse_expression_fig(gene_id, numid11, numid21)
+#
+#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
+#         customdata = graph_two_clickData['points'][0]['customdata']
+#         gene_id = customdata.split('<br>')[1]
+#         return make_timecourse_expression_fig(gene_id, numid11, numid21)
+#
+#     return "Start adding genes and they will show up here"
 
 
 def make_timecourse_expression_fig(gene_id, numid11, numid21):
@@ -372,23 +386,34 @@ def make_timecourse_expression_fig(gene_id, numid11, numid21):
     fig.update_layout(
         title="Timecourse expression of gene " + gene_name + '  -  ' + gene_id,
         xaxis_title="Day",
-        yaxis_title="<br> <br> <br> log10 of expression frequency",
+        yaxis_title="<br><br><br> log10 of expression frequency",
         legend_title="Condition",
         template='none',
-        margin= {'t': 30, 'b': 15, 'l': 10, 'r': 0},
-        height= 350
+        margin={'t': 50, 'b': 15, 'l': 50, 'r': 0},
+        height=350
 
     )
     return fig
+
+
 @app.callback(Output('timecourse_expression', 'figure'),
-              [Input('group1', 'value'),
+              [Input('volcano1', 'clickData'),
+               Input('volcano2', 'clickData'),
+               Input('group1', 'value'),
                Input('gene_searchbox', 'value')])
-def update_timecourse_expression(timepoint1, gene_searchbox):
+def update_timecourse_expression(graph_one_clickData, graph_two_clickData, timepoint1, gene_searchbox):
     numid11 = fetchnumid('C1', timepoint1)
     numid21 = fetchnumid('C2', timepoint1)
-    gene_id=gene_searchbox
+    gene_id = gene_searchbox
+    if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
+        customdata = graph_one_clickData['points'][0]['customdata']
+        gene_id = customdata.split('<br>')[1]
+        return make_timecourse_expression_fig(gene_id, numid11, numid21)
+    if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
+        customdata = graph_two_clickData['points'][0]['customdata']
+        gene_id = customdata.split('<br>')[1]
+        return make_timecourse_expression_fig(gene_id, numid11, numid21)
     return make_timecourse_expression_fig(gene_id, numid11, numid21)
-
 
 
 def make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1):
@@ -420,34 +445,36 @@ def make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1):
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             showlegend=False,
-
         ))
-
     fig.update_layout(
-        title="Timecourse of log fold change of gene " + gene_name + ' relative to group1: day ' + str (timepoint1),
+        title="Timecourse of log fold change of gene " + gene_name + ' relative to group1: day ' + str(timepoint1),
         xaxis_title="Day",
         yaxis_title="<br><br><br> relative log fold change",
         legend_title="Condition",
         template='none',
-        margin = {'t': 30, 'b': 15, 'l': 10, 'r': 0},
+        margin={'t': 50, 'b': 15, 'l': 50, 'r': 0},
         height=350
     )
     return fig
-
 @app.callback(Output('timecourse_lfc', 'figure'),
-              [Input('group1', 'value'),
+              [Input('volcano1', 'clickData'),
+               Input('volcano2', 'clickData'),
+               Input('group1', 'value'),
                Input('gene_searchbox', 'value')])
-def update_timecourse_lfc(timepoint1, gene_searchbox):
+def update_timecourse_lfc(graph_one_clickData, graph_two_clickData, timepoint1, gene_searchbox):
     numid11 = fetchnumid('C1', timepoint1)
     numid21 = fetchnumid('C2', timepoint1)
-    gene_id=gene_searchbox
+    gene_id = gene_searchbox
+
+    if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
+        customdata = graph_one_clickData['points'][0]['customdata']
+        gene_id = customdata.split('<br>')[1]
+        return make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1)
+    if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
+        customdata = graph_two_clickData['points'][0]['customdata']
+        gene_id = customdata.split('<br>')[1]
+        return make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1)
     return make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1)
-
-
-
-
-
-
 
 
 #
@@ -469,7 +496,6 @@ def update_timecourse_lfc(timepoint1, gene_searchbox):
 #     return "Start adding genes and they will show up here"
 
 
-
 #
 # def update_timeseries_lfc(graph_one_clickData, graph_two_clickData):
 #     if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
@@ -487,20 +513,6 @@ def update_timecourse_lfc(timepoint1, gene_searchbox):
 #         return "You clicked on graph two " + gene_id + ' ' + gene_name
 #
 #     return "Start adding genes and they will show up here"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
