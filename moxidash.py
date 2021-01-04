@@ -52,14 +52,14 @@ print('Loaded!')
 
 app.layout = html.Div(id='megadiv', children=[
     html.Div(id='markdowndiv', children=[
-                # html.H3('Column 2'),
-                dcc.Markdown('''
+        # html.H3('Column 2'),
+        dcc.Markdown('''
                 This dashboard enables visualization of 250k single cells profiled with
                 10xv2 chemistry in [Schiebinger 2019](https://doi.org/10.1016/j.cell.2019.01.006). 
                 For more details see 
                 [this document](https://docs.google.com/document/d/e/2PACX-1vQqMMBEbi36Tnrb3lIuu4QqMpBGbVpzlvZSqA6r_PPioOF_BG-HP2yk71F-haZcRLxL6KfA8urugUCf/pub)
                 '''),
-            ]),
+    ]),
     html.Div(id='mesodiv', children=[
         html.Div(id='group1div', children=[
             html.Div([
@@ -202,30 +202,16 @@ app.layout = html.Div(id='megadiv', children=[
                 dcc.Graph(id='timecourse_lfc', figure={})
             ]),
 
-
-
-
         ], className="nine columns"),
         html.Div([
             html.Div([
-                html.Div(id='searched_gene', style={'border': '6px yellow solid'},
-                         children=' SEARCHED GENE SHOWS HERE'),
-                html.Div(html.Button('Add selected genes', id='addgenes_button', n_clicks=0)),
-                html.Div(id='selection_header', style={'border': '2px red solid'}, children=' Selected genes: '),
-                html.Div(id='selected_genename_preview', style={'border': '2px lime solid'}),
+                html.H6('Selected genes '),
+                html.Div(id='selected_genename_preview'),
                 html.Br(),
-                html.Div(html.Button('Clear chosen genes', id='removegenes_button', n_clicks=0))
-            ], style={'border': '8px blue solid'}),
-            # html.H3('Gene list'),
-
-            html.Div([
-                html.Div(id='chosen_genename_list', style={'border': '2px gray solid'}),
-                html.Div(id='chosen_geneid_list', style={'border': '2px magenta solid'})
             ]),
-        ], className="three columns", style={'border': '8px orange solid'}),
+            # html.H3('Gene list'),
+        ], className="three columns"),
     ], className="row"),
-
-
 
 ])
 
@@ -250,20 +236,18 @@ def make_volcano(de, group1_name, group2_name, replicate):
         , layout={
             "title": {"text": "<br>" + str(replicate) + " replicate DE - day " +
                               str(group1_name) + ' VS day ' + str(group2_name)
-                , 'font': {'size': 16}
-                , 'x': 0
+                      # , 'font': {'size': 16}
+                      # , 'x': 0
                       }
             , 'xaxis': {'title': {"text": "　&nbsp;　log fold change <br> <br> "}}
             , 'yaxis': {'title': {"text": "<br> <br> -log10(p-value)"}}
-            , 'margin': {'t': 20, 'b': 15, 'l': 10, 'r': 0}
+            , 'margin': {'t': 50, 'b': 25, 'l': 10, 'r': 0}
             # , 'width': 1200
             # , 'height': 300
         }
     )
-
     fig.update_layout(hovermode='closest', template='none')
     fig.add_shape(type="line", x0=-10, y0=3, x1=10, y1=3, line=dict(color="Red", width=2, dash="dash"))
-    # fig.show()
     return fig
 
 
@@ -338,7 +322,7 @@ def update_selected_gene_preview(graph_one_selectData, graph_two_selectData):
             selected_gene_id_csv = selected_gene_id_csv + gene_id
         return selected_gene_name_csv
 
-    return "Select genes with the lasso or box tool and they will show up here"
+    return "Select genes with the lasso or box tool on either of the volcano plots and they will show up here so you can copy them"
 
 
 #     # table_style_conditions = update_table_style(selectedData)
@@ -456,6 +440,8 @@ def make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1):
         height=350
     )
     return fig
+
+
 @app.callback(Output('timecourse_lfc', 'figure'),
               [Input('volcano1', 'clickData'),
                Input('volcano2', 'clickData'),
