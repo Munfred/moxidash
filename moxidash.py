@@ -18,6 +18,16 @@ selected_gene_name_csv = ''
 selected_gene_id_csv = ''
 
 ## colors for line plots
+# plotly Light24 colors
+colorlist = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(57, 105, 172)', 'rgb(242, 183, 1)', 'rgb(231, 63, 116)',
+             'rgb(128, 186, 90)', 'rgb(230, 131, 16)', 'rgb(0, 134, 149)', 'rgb(207, 28, 144)', 'rgb(249, 123, 114)',
+             'rgb(165, 170, 153)', '#FD3216', '#00FE35', '#6A76FC', '#FED4C4', '#FE00CE', '#0DF9FF', '#F6F926',
+             '#FF9616', '#479B55',
+             '#EEA6FB', '#DC587D', '#D626FF', '#6E899C', '#00B5F7', '#B68E00', '#C9FBE5', '#FF0092', '#22FFA7',
+             '#E3EE9E', '#86CE00', '#BC7196', '#7E7DCD', '#FC6955', '#E48F72', '#2E91E5', '#E15F99', '#1CA71C',
+             '#FB0D0D', '#DA16FF', '#222A2A', '#B68100', '#750D86', '#EB663B', '#511CFB', '#00A08B', '#FB00D1',
+             '#FC0080', '#B2828D', '#6C7C32', '#778AAE', '#862A16', '#A777F1', '#620042', '#1616A7', '#DA60CA',
+             '#6C4516', '#0D2A63', '#AF0038']
 colordict = {
     'DoxC1': '#000099',
     '2iC1': '#d48002',
@@ -25,6 +35,24 @@ colordict = {
     'DoxC2': '#66a3ff',
     '2iC2': '#F4D03F',
     'serumC2': '#DF9AFF'
+}
+
+alphadict = {
+    'DoxC1': 1,
+    '2iC1': 1,
+    'serumC1': 1,
+    'DoxC2': 0.5,
+    '2iC2': 0.5,
+    'serumC2': 0.5
+}
+
+linedict = {
+    'DoxC1': 'solid',
+    '2iC1': 'solid',
+    'serumC1': 'dash',
+    'DoxC2': 'solid',
+    '2iC2': 'solid',
+    'serumC2': 'dash'
 }
 
 # create list of gene ids/names to search on searchbox
@@ -165,17 +193,16 @@ app.layout = html.Div(id='megadiv', children=[
         ], className="four columns"),
         html.Div(id='volcanoseldiv', children=[
             html.Div([
-                html.H6(""" Search for gene to visualize in timecourse """),
-                html.P("(or click on volcano plot)")
+                html.H6(""" Search for multiple genes to visualize in timecourse """),
+                html.P("(or click on volcano plot to see ONE gene)")
             ]),
             dcc.Dropdown(
                 id='gene_searchbox',
                 options=gene_search_options_list,
-                multi=False,
-                value="ENSMUSG00000012396"
+                multi=True,
+                value=["ENSMUSG00000012396", 'ENSMUSG00000074637', 'ENSMUSG00000022346', 'ENSMUSG00000024406']
             )
         ], className="four columns"),
-
     ], className="row"),
 
     html.Div(id='volcanosdiv', children=[
@@ -201,7 +228,6 @@ app.layout = html.Div(id='megadiv', children=[
                 # html.H3('Column 2'),
                 dcc.Graph(id='timecourse_lfc', figure={})
             ]),
-
         ], className="nine columns"),
         html.Div([
             html.Div([
@@ -212,7 +238,6 @@ app.layout = html.Div(id='megadiv', children=[
             # html.H3('Gene list'),
         ], className="three columns"),
     ], className="row"),
-
 ])
 
 
@@ -325,58 +350,39 @@ def update_selected_gene_preview(graph_one_selectData, graph_two_selectData):
     return "Select genes with the lasso or box tool on either of the volcano plots and they will show up here so you can copy them"
 
 
-#     # table_style_conditions = update_table_style(selectedData)
-#     print(json.dumps(selectedData))
-#     return json.dumps(selectedData)
-
-# @app.callback(Output('timecourse_expression', 'figure'),
-#               [Input('volcano1', 'clickData'),
-#                Input('volcano2', 'clickData'),
-#                Input('group1', 'value')])
-# def update_click_timecourse_expression(graph_one_clickData, graph_two_clickData, timepoint1):
-#     numid11 = fetchnumid('C1', timepoint1)
-#     numid21 = fetchnumid('C2', timepoint1)
-#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
-#         customdata = graph_one_clickData['points'][0]['customdata']
-#         gene_id = customdata.split('<br>')[1]
-#         return make_timecourse_expression_fig(gene_id, numid11, numid21)
-#
-#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
-#         customdata = graph_two_clickData['points'][0]['customdata']
-#         gene_id = customdata.split('<br>')[1]
-#         return make_timecourse_expression_fig(gene_id, numid11, numid21)
-#
-#     return "Start adding genes and they will show up here"
-
-
-def make_timecourse_expression_fig(gene_id, numid11, numid21):
-    gene_name = nice_descriptions.loc[gene_id]['gene_name']
-    tc = bigdedf.loc[gene_id].copy()  ## create tc dataframe to hold timecourse data for chosen data
-    tc = tc[(tc.group1 == numid11) | (tc.group1 == numid21)].copy()
-    for col in ['day', 'replicate', 'timepoint', 'dcr', 'condition']:
-        tc[col] = tc.group2.map(samples[col])
-    tc['condition_replicate'] = tc['condition'] + tc['replicate']
-    # Create traces
+def make_timecourse_expression_fig(gene_id_list, numid11, numid21):
     fig = go.Figure()
-    for cr in tc.condition_replicate.unique():
-        plotdf = tc.query('condition_replicate==@cr')
-        fig.add_trace(go.Scatter(
-            x=plotdf.timepoint,
-            y=plotdf.logscale2,
-            mode='lines+markers',
-            name=cr,
-            line_color=colordict[cr]
-        ))
-    fig.update_layout(
-        title="Timecourse expression of gene " + gene_name + '  -  ' + gene_id,
-        xaxis_title="Day",
-        yaxis_title="<br><br><br> log10 of expression frequency",
-        legend_title="Condition",
-        template='none',
-        margin={'t': 50, 'b': 15, 'l': 50, 'r': 0},
-        height=350
+    genenum = -1
+    for gene_id in gene_id_list:
+        genenum += 1  # for changing colors
+        gene_name = nice_descriptions.loc[gene_id]['gene_name']
+        tc = bigdedf.loc[gene_id].copy()  ## create tc dataframe to hold timecourse data for chosen data
+        tc = tc[(tc.group1 == numid11) | (tc.group1 == numid21)].copy()
+        for col in ['day', 'replicate', 'timepoint', 'dcr', 'condition']:
+            tc[col] = tc.group2.map(samples[col])
+        tc['condition_replicate'] = tc['condition'] + tc['replicate']
+        # Create traces
+        for cr in tc.condition_replicate.unique():
+            plotdf = tc.query('condition_replicate==@cr')
+            fig.add_trace(go.Scatter(
+                x=plotdf.timepoint,
+                y=plotdf.logscale2,
+                mode='lines+markers',
+                name=cr + ' ' + gene_name,
+                opacity=alphadict[cr],
+                line=dict(dash=linedict[cr]),
+                line_color=colorlist[genenum]
+            ))
+        fig.update_layout(
+            title="Timecourse expression of genes " + str(gene_id_list),
+            xaxis_title="Day",
+            yaxis_title="<br><br><br> log10 of expression frequency",
+            legend_title="Condition",
+            template='none',
+            margin={'t': 50, 'b': 15, 'l': 50, 'r': 0},
+            height=450
 
-    )
+        )
     return fig
 
 
@@ -388,57 +394,65 @@ def make_timecourse_expression_fig(gene_id, numid11, numid21):
 def update_timecourse_expression(graph_one_clickData, graph_two_clickData, timepoint1, gene_searchbox):
     numid11 = fetchnumid('C1', timepoint1)
     numid21 = fetchnumid('C2', timepoint1)
-    gene_id = gene_searchbox
+
     if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
         customdata = graph_one_clickData['points'][0]['customdata']
         gene_id = customdata.split('<br>')[1]
-        return make_timecourse_expression_fig(gene_id, numid11, numid21)
+        return make_timecourse_expression_fig([gene_id], numid11, numid21)
     if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
         customdata = graph_two_clickData['points'][0]['customdata']
         gene_id = customdata.split('<br>')[1]
-        return make_timecourse_expression_fig(gene_id, numid11, numid21)
-    return make_timecourse_expression_fig(gene_id, numid11, numid21)
+        return make_timecourse_expression_fig([gene_id], numid11, numid21)
+    gene_id_list = gene_searchbox
+    return make_timecourse_expression_fig(gene_id_list, numid11, numid21)
 
 
-def make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1):
-    gene_name = nice_descriptions.loc[gene_id]['gene_name']
-    tc = bigdedf.loc[gene_id].copy()  ## create tc dataframe to hold timecourse data for chosen data
-    tc = tc[(tc.group1 == numid11) | (tc.group1 == numid21)].copy()
-    for col in ['day', 'replicate', 'timepoint', 'dcr', 'condition']:
-        tc[col] = tc.group2.map(samples[col])
-    tc['condition_replicate'] = tc['condition'] + tc['replicate']
-
-    # Create traces
+def make_timecourse_lfc_fig(gene_id_list, numid11, numid21, timepoint1):
     fig = go.Figure()
-    for cr in tc.condition_replicate.unique():
-        plotdf = tc.query('condition_replicate==@cr')
+    genenum = -1
+    for gene_id in gene_id_list:
+        genenum += 1  # for changing colors
+        gene_name = nice_descriptions.loc[gene_id]['gene_name']
+        tc = bigdedf.loc[gene_id].copy()  ## create tc dataframe to hold timecourse data for chosen data
+        tc = tc[(tc.group1 == numid11) | (tc.group1 == numid21)].copy()
+        for col in ['day', 'replicate', 'timepoint', 'dcr', 'condition']:
+            tc[col] = tc.group2.map(samples[col])
+        tc['condition_replicate'] = tc['condition'] + tc['replicate']
 
-        fig.add_trace(go.Scatter(
-            x=plotdf.timepoint,
-            y=plotdf.lfc_mean,
-            mode='lines+markers',
-            name=cr,
-            line_color=colordict[cr]
-        ))
-        fig.add_trace(go.Scatter(
-            x=np.append(plotdf.timepoint.values, plotdf.timepoint.values[::-1]),  # x, then x reversed
-            y=np.append(plotdf.lfc_mean.values + plotdf.lfc_std.values,
-                        plotdf.lfc_mean.values[::-1] - plotdf.lfc_std.values[::-1]),  # upper, then lower reversed
-            fill='toself',
-            fillcolor='rgba(100,100,100,0.1)',
-            line=dict(color='rgba(255,255,255,0)'),
-            hoverinfo="skip",
-            showlegend=False,
-        ))
-    fig.update_layout(
-        title="Timecourse of log fold change of gene " + gene_name + ' relative to group1: day ' + str(timepoint1),
-        xaxis_title="Day",
-        yaxis_title="<br><br><br> relative log fold change",
-        legend_title="Condition",
-        template='none',
-        margin={'t': 50, 'b': 15, 'l': 50, 'r': 0},
-        height=350
-    )
+        # Create traces
+
+        for cr in tc.condition_replicate.unique():
+            plotdf = tc.query('condition_replicate==@cr')
+
+            fig.add_trace(go.Scatter(
+                x=plotdf.timepoint,
+                y=-plotdf.lfc_mean,
+                mode='lines+markers',
+                name=cr + ' ' + gene_name,
+                opacity=alphadict[cr],
+                line=dict(dash=linedict[cr]),
+                line_color=colorlist[genenum]
+            ))
+            fig.add_trace(go.Scatter(
+                x=np.append(plotdf.timepoint.values, plotdf.timepoint.values[::-1]),  # x, then x reversed
+                y=-np.append(plotdf.lfc_mean.values + plotdf.lfc_std.values,
+                             plotdf.lfc_mean.values[::-1] - plotdf.lfc_std.values[::-1]),  # upper, then lower reversed
+                fill='toself',
+                fillcolor='rgba(100,100,100,0.05)',
+                line=dict(color='rgba(255,255,255,0)'),
+                hoverinfo="skip",
+                showlegend=False,
+            ))
+        fig.update_layout(
+            title="Timecourse of log fold change of genes " + str(gene_id_list) + ' relative to group1: day ' + str(
+                timepoint1),
+            xaxis_title="Day",
+            yaxis_title="<br><br><br> relative log fold change",
+            legend_title="Condition",
+            template='none',
+            margin={'t': 50, 'b': 15, 'l': 50, 'r': 0},
+            height=450
+        )
     return fig
 
 
@@ -450,55 +464,18 @@ def make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1):
 def update_timecourse_lfc(graph_one_clickData, graph_two_clickData, timepoint1, gene_searchbox):
     numid11 = fetchnumid('C1', timepoint1)
     numid21 = fetchnumid('C2', timepoint1)
-    gene_id = gene_searchbox
 
     if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
         customdata = graph_one_clickData['points'][0]['customdata']
         gene_id = customdata.split('<br>')[1]
-        return make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1)
+        return make_timecourse_lfc_fig([gene_id], numid11, numid21, timepoint1)
     if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
         customdata = graph_two_clickData['points'][0]['customdata']
         gene_id = customdata.split('<br>')[1]
-        return make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1)
-    return make_timecourse_lfc_fig(gene_id, numid11, numid21, timepoint1)
+        return make_timecourse_lfc_fig([gene_id], numid11, numid21, timepoint1)
 
-
-#
-# def update_timeseries_expression_volcano(graph_one_clickData, graph_two_clickData):
-#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
-#         customdata = graph_one_clickData['points'][0]['customdata']
-#         print(customdata.split('<br>')[0])
-#         print(customdata.split('<br>')[1])
-#         gene_id = customdata.split('<br>')[1]
-#         gene_name = customdata.split('<br>')[0]
-#         return "You clicked on graph one " + gene_id + ' ' + gene_name
-#
-#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
-#         customdata = graph_two_clickData['points'][0]['customdata']
-#         gene_id = customdata.split('<br>')[1]
-#         gene_name = customdata.split('<br>')[0]
-#         return "You clicked on graph two " + gene_id + ' ' + gene_name
-#
-#     return "Start adding genes and they will show up here"
-
-
-#
-# def update_timeseries_lfc(graph_one_clickData, graph_two_clickData):
-#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano1.clickData':
-#         customdata = graph_one_clickData['points'][0]['customdata']
-#         print(customdata.split('<br>')[0])
-#         print(customdata.split('<br>')[1])
-#         gene_id = customdata.split('<br>')[1]
-#         gene_name = customdata.split('<br>')[0]
-#         return "You clicked on graph one " + gene_id + ' ' + gene_name
-#
-#     if dash.callback_context.triggered[0]['prop_id'] == 'volcano2.clickData':
-#         customdata = graph_two_clickData['points'][0]['customdata']
-#         gene_id = customdata.split('<br>')[1]
-#         gene_name = customdata.split('<br>')[0]
-#         return "You clicked on graph two " + gene_id + ' ' + gene_name
-#
-#     return "Start adding genes and they will show up here"
+    gene_id_list = gene_searchbox
+    return make_timecourse_lfc_fig(gene_id_list, numid11, numid21, timepoint1)
 
 
 if __name__ == '__main__':
